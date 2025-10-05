@@ -1,0 +1,164 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="autocar">
+
+  <!-- ===================== -->
+  <!-- Parameters -->
+  <!-- ===================== -->
+  <xacro:property name="chassis_length" value="1.2"/>
+  <xacro:property name="chassis_width"  value="0.6"/>
+  <xacro:property name="chassis_height" value="0.2"/>
+  <xacro:property name="wheel_radius"   value="0.12"/>
+  <xacro:property name="wheel_width"    value="0.05"/>
+  <xacro:property name="wheel_mass"     value="2.0"/>
+  <xacro:property name="chassis_mass"   value="30.0"/>
+  <xacro:property name="zero"           value="0.0"/>
+
+  <!-- ===================== -->
+  <!-- Base link (Chassis) -->
+  <!-- ===================== -->
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 ${chassis_height/2+0.07}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0.0 0.0 0.8 1.0"/>
+      </material>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 ${chassis_height/2+0.07}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <mass value="${chassis_mass}"/>
+      <inertia ixx="1" iyy="3.7" izz="4.5"
+               ixy="0.0" ixz="0.0" iyz="0.0"/>
+    </inertial>
+  </link>
+
+  <!-- ===================== -->
+  <!-- Wheels (4 independent powered) -->
+  <!-- ===================== -->
+  <xacro:macro name="wheel" params="name x y">
+    <link name="${name}_wheel">
+      <visual>
+        <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+        <material name="black">
+          <color rgba="0.1 0.1 0.1 1.0"/>
+        </material>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+
+      <inertial>
+        <mass value="${wheel_mass}"/>
+        <inertia ixx="0.0076" iyy="0.0144" izz="0.0076"
+                 ixy="0.0" ixz="0.0" iyz="0.0"/>
+      </inertial>
+    </link>
+
+    <!-- Revolute joint to chassis -->
+    <joint name="${name}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${name}_wheel"/>
+      <origin xyz="${x} ${y} ${wheel_radius}" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/> 
+    </joint>
+
+    <!-- Transmission for ros_control -->
+    <transmission name="${name}_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <joint name="${name}_wheel_joint">
+        <hardwareInterface>VelocityJointInterface</hardwareInterface>
+      </joint>
+      <actuator name="${name}_motor">
+        <hardwareInterface>VelocityJointInterface</hardwareInterface>
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission>
+
+  </xacro:macro> 
+
+  <!-- Place 4 wheels -->
+  <xacro:wheel name="front_left"  x="0.47"  y="0.327"/>
+  <xacro:wheel name="front_right" x="0.47"  y="-0.327"/>
+  <xacro:wheel name="rear_left"   x="-0.47" y="0.327"/>
+  <xacro:wheel name="rear_right"  x="-0.47" y="-0.327"/>
+
+  <!-- ===================== -->
+  <!-- Sensors -->
+  <!-- ===================== -->
+
+  <!-- 3D LiDAR -->
+  <link name="lidar_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.1" length="0.1"/>
+      </geometry>
+      <material name="grey">
+        <color rgba="0.5 0.5 0.5 1"/>
+      </material>
+    </visual>
+  </link>
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0.3 0 ${chassis_height+0.1}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Camera -->
+  <link name="camera_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.02"/>
+      </geometry>
+      <material name="red">
+        <color rgba="1 0 0 1"/>
+      </material>
+    </visual>
+  </link>
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="0.6 0 ${chassis_height}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- IMU -->
+  <link name="imu_link"/>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="-0.3 0.1 ${chassis_height}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- GPS -->
+  <link name="gps_link"/>
+  <joint name="gps_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="gps_link"/>
+    <origin xyz="-0.3 -0.1 ${chassis_height}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Odometry frame --> 
+  <link name="odom"/> 
+  <joint name="odom_joint" type="fixed"> 
+    <parent link="odom"/> 
+    <child link="base_link"/> 
+  </joint>
+
+</robot>

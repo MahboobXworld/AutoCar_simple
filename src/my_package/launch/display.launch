@@ -1,0 +1,27 @@
+<launch>
+  <!-- Robot urdf launcher -->
+  <param name="robot_description"
+         command="$(find xacro)/xacro '$(find my_package)/urdf/car.xacro'" />
+
+  <!-- Robot state publisher -->
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+
+  <!-- Robot joint publisher -->
+  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>
+  
+  <!-- RViz for visualization -->
+  <node name="rviz" pkg="rviz" type="rviz"
+        args="-d $(find my_package)/rviz/full_stack.rviz" output="screen"/>
+  
+  <!-- Run your custom wheel controller -->
+  <node pkg="my_package" type="controller.py" name="controller" output="screen" />
+  
+  <!-- Map launcher -->
+  <node name="map_server" pkg="map_server" type="map_server" output="screen" args="$(find my_package)/mapping/map/map01.yaml">
+    <param name="frame_id" value="map" />
+  </node>
+
+  <!-- Static transform from map to odom (identity transform) -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="map_to_odom" args="2.2 3.0 0 0 0 0 map odom" />
+
+</launch>
